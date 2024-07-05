@@ -12,11 +12,15 @@ pub struct Config {
 impl is the function related to the memory instance.  Think kind of like a class and the functions associated
 with the class.  Idiomatic Rust has an impl for each struct, I believe. */
 
-impl Config {
-    pub fn build(args: &[String]) -> Result<Config, &'static str> {
+/* impl Config {
+    pub fn build(mut args: impl Iterator<Item = String>, ) -> Result<Config, &'static str> {
             if args.len() < 3 { //the input needs at least three elements to be successful
                 return Err("Not enough arguments. Please try again.");
             }
+            /*Updating the signature of the build function to be mut args: impl Iterator<Item = String>, the env:args function
+            in main returns a type that implements the Iterator trait and returns String values. This means the args can be 
+            any type that implemnts the Iterator trait and returns String items. This function is taking ownership of args
+            and mutating it by iterating over it. I am re-writing the impl Config below.*/
             let query = args[1].clone(); //the program's name takes args[0] location; need to start at index 1.
             let file_path = args[2].clone();
             let ignore_case = env::var("IGNORE_CASE").is_ok();
@@ -30,6 +34,32 @@ impl Config {
             Ok(Config {query, file_path, ignore_case}) //no semi-colon because this is the output
             /* Notice here that all three items from the structure must be returned for the Ok to be satisfied. */
         }
+} */
+
+/*Here is the re-written impl Config below */
+
+impl Config {
+    pub fn build(mut args: impl Iterator<Item = String>, ) -> Result<Config, &'static str> {
+        args.next(); //calling this to skip over the first element of the env::args which is the name of the program
+
+        let query = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Did not get a query string"),
+        };
+
+        let file_path = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Did not get a file path"),
+        };
+
+        let ignore_case = env::var("IGNORE_CASE").is_ok();
+
+        Ok(Config {
+            query,
+            file_path,
+            ignore_case,
+        })
+    }
 }
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
@@ -55,7 +85,8 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     Ok(()) //return the unit () type
 }
 
-pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> { //case sensitive
+/*Re-writing the search function to use iterator adaptor methods */
+/* pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> { //case sensitive
     
     let mut results = Vec::new(); //create a new vector to store the results of the search
 
@@ -65,13 +96,22 @@ pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> { //case sensi
         }
     }
     results //no semi-colon because this is the output.
-}
+} */
 /*the search function has a lifetime parameter 'a which specifies that the contents are the items that need to 
 remain in memory until the search function is closed. Without the lifetime parameter, the complier will throw an 
 error. Rust requires that you connect arguments to return values. This way the search function knows that the 
 contents input is what will drive the Vec output. */
 
-pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+    contents.lines().filter(|line| line.contains(query)).collect()
+}
+
+/*The search function above takes advantage of the iterator adaptor methods. Note how there is no need for a
+mutable vector to be created before anything is done. The collect() method creates the vector and puts all of
+the results from the lines() method and filter() closure into the contents vector. */
+
+/*Re-writing the function below to use the same iterator adaptors */
+/* pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     let query = query.to_lowercase();
     let mut results = Vec::new();
 
@@ -81,12 +121,18 @@ pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a st
         }
     }
     results //no semi-colon because this is the output.
-}
+} */
 /* the case insensitive search function has the same signature as the search function above it but the guts are
 slightly different. In this function, the query is modified to be all lowercase as well as the lines in the contents
 of the search item. The rest of the function is almost the same as the case sensitive search function. The query.to_lowercase()
 creates a string that is referenced by the contains method.  This is because the old way was using a string slice and this
 way is using a full string.  The to_lowercase creates new data instead of referencing data.  */
+
+pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+    contents.lines().filter(|line| line.to_lowercase().contains(query.to_lowercase())).collect()
+}
+/*The function above uses iterator adaptors to make the code concise.  The contents will iterate through the lines
+and ensure the input is all lower case and filter for the query and then collect the matching lines into a vector */
 
 #[cfg(test)]
 mod tests {

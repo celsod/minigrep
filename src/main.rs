@@ -9,13 +9,16 @@ fn main() {
     /*The first line under main() reads: let args be a vector of type string which is the env::args() iterator and then collect
     the values of the iterator into the args vector. */
     //dbg!(args); commented out because no longer needed
-    let config = Config::build(&args).unwrap_or_else(|err| {
+    let config = Config::build(env::args()).unwrap_or_else(|err| {
         eprintln!("Problem parsing arguments: {}", err);
         process::exit(1); //Let's call this a graceful exit
     });
     /*Calling the impl Config and the associated function new */
     /*unwrap_or_else creates a custom non-panic error handling.  It will unwrap the Ok value or it will display
     the error code that we created. */
+    /*Replacing &args with env::args() to return an iterator. This way ownership can transfer around and be used
+    by the other parts of the program. We're passing ownership of the iterator returned from env::args() to 
+    Config::build */
     
 
     println!("Searching for {}", config.query); //query and file_path are related and their purpose is to configure
